@@ -1,0 +1,53 @@
+{
+  "name": "waterfall-lens",
+  "version": "1.0.0",
+  "description": "Analyse a HAR capture into an interactive waterfall: blocking chains, third-party weight attribution, and a plain-English explanation of what delayed first paint.",
+  "type": "module",
+  "bin": {
+    "waterfall-lens": "./dist/cli.js"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "test": "vitest run",
+    "coverage": "vitest run --coverage",
+    "lint": "eslint src test --max-warnings 0",
+    "typecheck": "tsc --noEmit",
+    "dev": "tsx src/cli.ts"
+  },
+  "license": "MIT",
+  "author": "Prabesh Sharma",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/hellpuffyt/waterfall-lens.git"
+  },
+  "homepage": "https://github.com/hellpuffyt/waterfall-lens#readme",
+  "bugs": {
+    "url": "https://github.com/hellpuffyt/waterfall-lens/issues"
+  },
+  "keywords": [
+    "har",
+    "waterfall",
+    "performance",
+    "web-performance",
+    "critical-path",
+    "first-paint"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.15.0",
+    "@types/node": "^22.10.0",
+    "@vitest/coverage-v8": "^2.1.8",
+    "eslint": "^9.15.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2",
+    "typescript-eslint": "^8.18.0",
+    "vitest": "^2.1.8"
+  }
+}
