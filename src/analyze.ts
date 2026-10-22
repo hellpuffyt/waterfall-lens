@@ -106,6 +106,12 @@ function classifyResourceType(mimeType: string, url: string): ResourceType {
   return 'other';
 }
 
+/** content.mimeType is required by the HAR spec but hand-edited files omit or mistype it. */
+function mimeTypeOf(entry: HarEntry): string {
+  const mt: unknown = entry.response.content.mimeType;
+  return typeof mt === 'string' ? mt : '';
+}
+
 function transferBytesOf(entry: HarEntry): number {
   const r = entry.response;
   if (typeof r._transferSize === 'number' && r._transferSize >= 0) return r._transferSize;
@@ -142,7 +148,7 @@ export function normalizeEntries(har: Har): { entries: NormalizedEntry[]; primar
   const originMs = Date.parse(first.startedDateTime);
 
   const documentEntry =
-    sorted.find((e) => classifyResourceType(e.response.content.mimeType, e.request.url) === 'document') ?? first;
+    sorted.find((e) => classifyResourceType(mimeTypeOf(e), e.request.url) === 'document') ?? first;
   const primaryHostname = hostnameOf(documentEntry.request.url);
 
   const entries: NormalizedEntry[] = sorted.map((e, index) => {
@@ -160,7 +166,7 @@ export function normalizeEntries(har: Har): { entries: NormalizedEntry[]; primar
       typeof e.time === 'number' && e.time >= 0
         ? e.time
         : blockedMs + dnsMs + connectMs + sslMs + sendMs + waitMs + receiveMs;
-    const mimeType = e.response.content.mimeType || 'application/octet-stream';
+    const mimeType = mimeTypeOf(e) || 'application/octet-stream';
     const resourceType = classifyResourceType(mimeType, e.request.url);
     const hostname = hostnameOf(e.request.url);
     return {
@@ -347,8 +353,8 @@ export function analyzeHar(har: Har, sourceLabel: string): WaterfallReport {
     totalRequests: entries.length,
     totalBytes,
     totalLoadTimeMs,
-    domContentLoadedMs: page?.pageTimings.onContentLoad,
-    onLoadMs: page?.pageTimings.onLoad,
+    domContentLoadedMs: page?.pageTimings?.onContentLoad,
+    onLoadMs: page?.pageTimings?.onLoad,
     firstPaintEstimateMs,
     entries,
     thirdPartyAttribution: attribution,

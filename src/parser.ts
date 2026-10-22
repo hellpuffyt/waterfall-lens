@@ -29,6 +29,9 @@ export function validateHar(data: unknown): asserts data is Har {
     if (typeof e.startedDateTime !== 'string') {
       throw new HarParseError(`log.entries[${i}].startedDateTime is missing or not a string.`);
     }
+    if (!Number.isFinite(Date.parse(e.startedDateTime))) {
+      throw new HarParseError(`log.entries[${i}].startedDateTime is not a valid date: ${JSON.stringify(e.startedDateTime.slice(0, 64))}.`);
+    }
     if (typeof e.time !== 'number') {
       throw new HarParseError(`log.entries[${i}].time is missing or not a number.`);
     }
@@ -39,6 +42,10 @@ export function validateHar(data: unknown): asserts data is Har {
     const response = e.response;
     if (typeof response !== 'object' || response === null || typeof (response as Record<string, unknown>).status !== 'number') {
       throw new HarParseError(`log.entries[${i}].response.status is missing or not a number.`);
+    }
+    const content = (response as Record<string, unknown>).content;
+    if (typeof content !== 'object' || content === null) {
+      throw new HarParseError(`log.entries[${i}].response.content is missing or not an object.`);
     }
     const timings = e.timings;
     if (typeof timings !== 'object' || timings === null) {

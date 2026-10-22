@@ -25,6 +25,15 @@ function fail(message: string): never {
   process.exit(1);
 }
 
+/** Unexpected shapes that slip past validation must still end in a one-line error, not a stack trace. */
+function analyzeOrFail(har: Parameters<typeof analyzeHar>[0], label: string): ReturnType<typeof analyzeHar> {
+  try {
+    return analyzeHar(har, label);
+  } catch (err) {
+    fail(`could not analyse this HAR: ${err instanceof Error ? err.message : String(err)}`);
+  }
+}
+
 function runAnalyze(args: string[]): void {
   const jsonFlag = args.includes('--json');
   const file = args.find((a) => !a.startsWith('--'));
@@ -36,7 +45,7 @@ function runAnalyze(args: string[]): void {
   } catch (err) {
     fail(err instanceof HarParseError ? err.message : String(err));
   }
-  const report = analyzeHar(har, basename(file));
+  const report = analyzeOrFail(har, basename(file));
 
   if (jsonFlag) {
     process.stdout.write(`${JSON.stringify(report, null, 2)}\n`);
@@ -62,7 +71,7 @@ function runReport(args: string[]): void {
   } catch (err) {
     fail(err instanceof HarParseError ? err.message : String(err));
   }
-  const report = analyzeHar(har, basename(file));
+  const report = analyzeOrFail(har, basename(file));
   const html = renderHtmlReport(report);
   writeFileSync(out, html, 'utf-8');
   process.stdout.write(`Wrote ${out} (${report.totalRequests} requests analysed)\n`);

@@ -261,6 +261,17 @@ export function renderHtmlReport(report: WaterfallReport): string {
   document.getElementById('source-label').textContent =
     report.sourceLabel + (report.pageUrl ? ' — ' + report.pageUrl : '');
 
+  // Everything below that is inserted with innerHTML goes through h(): URLs,
+  // hostnames and reasons come straight from the (untrusted) HAR file.
+  function h(v) {
+    return String(v)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
   function fmtBytes(n) {
     if (n < 1024) return n + ' B';
     if (n < 1024 * 1024) return (n / 1024).toFixed(1) + ' KB';
@@ -278,7 +289,7 @@ export function renderHtmlReport(report: WaterfallReport): string {
   ].forEach(function (pair) {
     var d = document.createElement('div');
     d.className = 'stat';
-    d.innerHTML = '<div class="value">' + pair[1] + '</div><div class="label">' + pair[0] + '</div>';
+    d.innerHTML = '<div class="value">' + h(pair[1]) + '</div><div class="label">' + h(pair[0]) + '</div>';
     summary.appendChild(d);
   });
 
@@ -288,7 +299,7 @@ export function renderHtmlReport(report: WaterfallReport): string {
   typeOrder.forEach(function (t) {
     var sw = document.createElement('span');
     sw.className = 'sw';
-    sw.innerHTML = '<span class="chip" style="background:' + typeColor[t] + '"></span>' + t;
+    sw.innerHTML = '<span class="chip" style="background:' + typeColor[t] + '"></span>' + h(t);
     legendEl.appendChild(sw);
   });
 
@@ -298,8 +309,8 @@ export function renderHtmlReport(report: WaterfallReport): string {
   } else {
     report.criticalChain.forEach(function (step, i) {
       var li = document.createElement('li');
-      li.innerHTML = '<strong>' + (i + 1) + '. ' + step.resourceType + '</strong> ' + step.url +
-        '<div class="meta">' + step.reason + ' · finished at ' + fmtMs(step.endMs) + ' · took ' + fmtMs(step.durationMs) + '</div>';
+      li.innerHTML = '<strong>' + (i + 1) + '. ' + h(step.resourceType) + '</strong> ' + h(step.url) +
+        '<div class="meta">' + h(step.reason) + ' · finished at ' + h(fmtMs(step.endMs)) + ' · took ' + h(fmtMs(step.durationMs)) + '</div>';
       chainEl.appendChild(li);
     });
   }
@@ -388,7 +399,7 @@ export function renderHtmlReport(report: WaterfallReport): string {
       name.title = e.url;
       var short = e.url.length > 58 ? e.url.slice(0, 55) + '…' : e.url;
       name.innerHTML = '<span class="type-dot" style="background:' + (typeColor[e.resourceType] || typeColor.other) + '"></span>' +
-        short + (e.thirdParty ? '<span class="badge">3rd party</span>' : '');
+        h(short) + (e.thirdParty ? '<span class="badge">3rd party</span>' : '');
       var trackCell = document.createElement('div');
       trackCell.className = 'track-cell';
       var track = document.createElement('div');
@@ -440,9 +451,9 @@ export function renderHtmlReport(report: WaterfallReport): string {
   } else {
     var head = '<tr><th>Origin</th><th class="num">Requests</th><th class="num">Bytes</th><th class="num">% of page</th><th class="num">Blocking time</th></tr>';
     var rows = report.thirdPartyAttribution.map(function (t) {
-      return '<tr><td>' + t.hostname + '</td><td class="num">' + t.requestCount + '</td><td class="num">' +
-        fmtBytes(t.totalBytes) + '</td><td class="num">' + t.pctOfPageBytes.toFixed(1) + '%</td><td class="num">' +
-        fmtMs(t.totalBlockingTimeMs) + '</td></tr>';
+      return '<tr><td>' + h(t.hostname) + '</td><td class="num">' + h(t.requestCount) + '</td><td class="num">' +
+        h(fmtBytes(t.totalBytes)) + '</td><td class="num">' + h(t.pctOfPageBytes.toFixed(1)) + '%</td><td class="num">' +
+        h(fmtMs(t.totalBlockingTimeMs)) + '</td></tr>';
     }).join('');
     table.innerHTML = head + rows;
   }
