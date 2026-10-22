@@ -3,6 +3,30 @@
 All notable changes to this project are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+### Security
+
+- The HTML report escapes every HAR-supplied string it inserts as HTML
+  (request URLs, critical-chain reasons, third-party hostnames). Before, a
+  HAR whose URL contained markup executed script when the report was opened.
+
+### Fixed
+
+- An unparseable `startedDateTime` is rejected instead of producing `NaN`
+  timings; a missing `response.content` is a validation error instead of a
+  crash; a page without `pageTimings` and a non-string `content.mimeType` are
+  tolerated; unexpected analysis errors end in a one-line CLI error.
+- `report.html` from the README quickstart is gitignored.
+- CI workflow token restricted to `contents: read`; non-major dev-dependency
+  audit fixes.
+
+### Added
+
+- `test/hostile-input.test.ts` (runs the generated report in jsdom with
+  hostile URLs; malformed-file CLI checks; a 20,000-entry capture).
+- `SECURITY.md`, `.editorconfig`, `docs/PRODUCTION_READINESS.md`.
+
 ## [1.0.0] - 2026-09-02
 
 ### Added

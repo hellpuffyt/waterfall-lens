@@ -86,7 +86,8 @@ export interface HarPage {
   startedDateTime: string;
   id: string;
   title: string;
-  pageTimings: HarPageTimings;
+  /** Required by the HAR spec, but hand-edited and some exported files omit it. */
+  pageTimings?: HarPageTimings;
 }
 
 export interface HarLog {
