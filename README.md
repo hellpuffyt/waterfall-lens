@@ -98,6 +98,20 @@ waterfall so the causal thread is unambiguous:
 - **Findings panel** at the top states the plain-English explanation before
   you've looked at a single bar.
 
+**Untrusted input.** Every string in a HAR file (URLs, hostnames, initiator
+URLs) is treated as untrusted: the report inserts them as escaped text, and
+the embedded JSON escapes `<` so a URL cannot close the `<script>` block.
+`test/hostile-input.test.ts` renders a HAR with HTML/script payloads in its
+URLs and checks that nothing executes. Malformed files (truncated JSON,
+unparseable `startedDateTime`, missing `response.content`) stop with a
+one-line error and exit code 1.
+
+**Scale.** A synthetic 20,000-entry capture is analysed in about 0.2 s by
+the CLI; the generated report took about 2.4 s to load and about 1.2 s to
+redraw after a click in headless Chromium on an Apple M5. The whole file is
+read into memory, so multi-hundred-megabyte HARs (captures saved "with
+content" of large media) need correspondingly more RAM.
+
 ## Architecture
 
 ```
@@ -135,7 +149,7 @@ waterfall so the causal thread is unambiguous:
 
 The engine (`analyze.ts`) is a pure function of `Har → WaterfallReport` with
 no I/O, so it's exhaustively unit-testable against hand-built HAR shapes —
-that's where most of the 109 tests live. `html.ts` then serializes the
+that's where most of the 117 tests live. `html.ts` then serializes the
 report as embedded JSON and renders it with a small vanilla-JS layer (no
 framework, no bundler, no CDN dependency at view time).
 
@@ -161,7 +175,7 @@ custom dashboard, etc.), not just the two built-in output formats.
 ```bash
 npm run typecheck   # tsc --noEmit, strict mode
 npm run lint        # eslint, zero warnings
-npm test            # vitest, 109 tests
+npm test            # vitest, 117 tests
 npm run coverage    # v8 coverage, thresholds enforced
 npm run build       # emit dist/
 ```
