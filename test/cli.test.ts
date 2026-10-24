@@ -1,8 +1,9 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { mkdtempSync, writeFileSync, readFileSync, rmSync } from 'node:fs';
+import { mkdtempSync, writeFileSync, readFileSync, rmSync, symlinkSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { main } from '../src/cli.js';
+import { pathToFileURL } from 'node:url';
+import { isEntryPoint, main } from '../src/cli.js';
 
 let dir: string;
 let harPath: string;
@@ -169,5 +170,25 @@ describe('CLI: report', () => {
   it('fails with a clear message on a missing file', () => {
     expect(() => { main(['report', join(dir, 'missing.har')]); }).toThrow();
     expect(stderr.join('')).toMatch(/Could not read file/);
+  });
+});
+
+describe('isEntryPoint', () => {
+  // Creating a file symlink needs extra privileges on Windows; npm uses .cmd shims there.
+  it.skipIf(process.platform === 'win32')('matches the module itself and a symlink to it (how npm installs bin entries)', () => {
+    const linkDir = mkdtempSync(join(tmpdir(), 'wl-bin-'));
+    try {
+      const target = join(linkDir, 'cli.js');
+      writeFileSync(target, '');
+      const link = join(linkDir, 'waterfall-lens');
+      symlinkSync(target, link);
+      const url = pathToFileURL(target).href;
+      expect(isEntryPoint(target, url)).toBe(true);
+      expect(isEntryPoint(link, url)).toBe(true);
+      expect(isEntryPoint(join(linkDir, 'other.js'), url)).toBe(false);
+      expect(isEntryPoint(undefined, url)).toBe(false);
+    } finally {
+      rmSync(linkDir, { recursive: true, force: true });
+    }
   });
 });

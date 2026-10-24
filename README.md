@@ -65,6 +65,15 @@ npm run dev -- analyze fixtures/news-article-heavy.har
 npm run dev -- report fixtures/news-article-heavy.har --out report.html
 ```
 
+waterfall-lens is not published to npm. To get the `waterfall-lens` command
+used in the examples above (and the importable `waterfall-lens` package for
+the API below), build and link the clone:
+
+```bash
+npm run build
+npm link            # or run it directly: node dist/cli.js analyze <file.har>
+```
+
 No HAR file handy? Three realistic sample captures ship in `fixtures/` so
 the demo works immediately:
 
@@ -149,7 +158,7 @@ content" of large media) need correspondingly more RAM.
 
 The engine (`analyze.ts`) is a pure function of `Har → WaterfallReport` with
 no I/O, so it's exhaustively unit-testable against hand-built HAR shapes —
-that's where most of the 117 tests live. `html.ts` then serializes the
+that's where most of the 118 tests live. `html.ts` then serializes the
 report as embedded JSON and renders it with a small vanilla-JS layer (no
 framework, no bundler, no CDN dependency at view time).
 
@@ -175,7 +184,7 @@ custom dashboard, etc.), not just the two built-in output formats.
 ```bash
 npm run typecheck   # tsc --noEmit, strict mode
 npm run lint        # eslint, zero warnings
-npm test            # vitest, 117 tests
+npm test            # vitest, 118 tests
 npm run coverage    # v8 coverage, thresholds enforced
 npm run build       # emit dist/
 ```

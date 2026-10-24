@@ -7,12 +7,19 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Security
 
+- Dev dependencies: `vitest`/`@vitest/coverage-v8` 2.x -> 4.1.12, clearing the
+  test-toolchain advisories (tinypool GHSA-5gmw-xhrv-c9v3 / GHSA-85c8-ppgw-ccpr,
+  esbuild GHSA-67mh-4wv8-2f99, @vitest/mocker GHSA-qxg6-89mg-rqv8). `npm audit` is clean.
 - The HTML report escapes every HAR-supplied string it inserts as HTML
   (request URLs, critical-chain reasons, third-party hostnames). Before, a
   HAR whose URL contained markup executed script when the report was opened.
 
 ### Fixed
 
+- The installed `waterfall-lens` command (`npm link`, global install,
+  `node_modules/.bin`) did nothing and exited 0, because the entry-point
+  check compared the symlinked `argv[1]` with the real module path. Both are
+  now resolved through `realpath` first.
 - An unparseable `startedDateTime` is rejected instead of producing `NaN`
   timings; a missing `response.content` is a validation error instead of a
   crash; a page without `pageTimings` and a non-string `content.mimeType` are
