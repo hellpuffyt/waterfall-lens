@@ -1,7 +1,7 @@
 #!/usr/bin/env node
-import { writeFileSync } from 'node:fs';
+import { realpathSync, writeFileSync } from 'node:fs';
 import { basename } from 'node:path';
-import { pathToFileURL } from 'node:url';
+import { fileURLToPath } from 'node:url';
 import { loadHarFile, HarParseError } from './parser.js';
 import { analyzeHar } from './analyze.js';
 import { renderHtmlReport } from './html.js';
@@ -97,8 +97,23 @@ export function main(argv: string[]): void {
   }
 }
 
+/**
+ * True when this module is the process entry point. npm installs `bin`
+ * entries as symlinks (npm link, global installs, node_modules/.bin), so both
+ * sides are compared after resolving symlinks; comparing the raw argv[1]
+ * made the installed command exit 0 without doing anything.
+ */
+export function isEntryPoint(argv1: string | undefined, moduleUrl: string): boolean {
+  if (!argv1) return false;
+  try {
+    return realpathSync(argv1) === realpathSync(fileURLToPath(moduleUrl));
+  } catch {
+    return false;
+  }
+}
+
 /* c8 ignore start -- process.argv entrypoint, exercised via CLI integration tests spawning node */
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+if (isEntryPoint(process.argv[1], import.meta.url)) {
   main(process.argv.slice(2));
 }
 /* c8 ignore stop */

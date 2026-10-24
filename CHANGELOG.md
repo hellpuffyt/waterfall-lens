@@ -13,6 +13,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- The installed `waterfall-lens` command (`npm link`, global install,
+  `node_modules/.bin`) did nothing and exited 0, because the entry-point
+  check compared the symlinked `argv[1]` with the real module path. Both are
+  now resolved through `realpath` first.
 - An unparseable `startedDateTime` is rejected instead of producing `NaN`
   timings; a missing `response.content` is a validation error instead of a
   crash; a page without `pageTimings` and a non-string `content.mimeType` are

@@ -158,7 +158,7 @@ content" of large media) need correspondingly more RAM.
 
 The engine (`analyze.ts`) is a pure function of `Har → WaterfallReport` with
 no I/O, so it's exhaustively unit-testable against hand-built HAR shapes —
-that's where most of the 117 tests live. `html.ts` then serializes the
+that's where most of the 118 tests live. `html.ts` then serializes the
 report as embedded JSON and renders it with a small vanilla-JS layer (no
 framework, no bundler, no CDN dependency at view time).
 
@@ -184,7 +184,7 @@ custom dashboard, etc.), not just the two built-in output formats.
 ```bash
 npm run typecheck   # tsc --noEmit, strict mode
 npm run lint        # eslint, zero warnings
-npm test            # vitest, 117 tests
+npm test            # vitest, 118 tests
 npm run coverage    # v8 coverage, thresholds enforced
 npm run build       # emit dist/
 ```
