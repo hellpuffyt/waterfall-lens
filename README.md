@@ -65,6 +65,15 @@ npm run dev -- analyze fixtures/news-article-heavy.har
 npm run dev -- report fixtures/news-article-heavy.har --out report.html
 ```
 
+waterfall-lens is not published to npm. To get the `waterfall-lens` command
+used in the examples above (and the importable `waterfall-lens` package for
+the API below), build and link the clone:
+
+```bash
+npm run build
+npm link            # or run it directly: node dist/cli.js analyze <file.har>
+```
+
 No HAR file handy? Three realistic sample captures ship in `fixtures/` so
 the demo works immediately:
 
