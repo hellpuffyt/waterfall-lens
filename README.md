@@ -1,13 +1,21 @@
 # waterfall-lens
 
-**Turn a HAR capture into an answer, not another table.**
+A CLI and library that reads a HAR capture, works out which requests gated
+first paint, and writes the answer in plain English plus a self-contained
+interactive HTML waterfall.
+
+[Case study ↗](https://hellpuff.dev/work/waterfall-lens)
+
+<img src="docs/assets/report-overview.webp" width="100%" alt="waterfall-lens HTML report for the bundled news-article HAR: summary metrics, the plain-English explanation of what delayed first paint, the critical chain and the start of the waterfall">
+
+*Real screenshot: the report generated from `fixtures/news-article-heavy.har`.*
 
 Every browser's DevTools already gives you a waterfall. What it doesn't give
 you is the one sentence you actually want: *why was first paint slow, and
 whose fault was it?* waterfall-lens parses a HAR file, reconstructs the
 critical rendering chain by walking real initiator links, attributes page
 weight to the third-party domains that caused it, and writes the answer in
-plain English — next to an interactive waterfall you can zoom, filter, and
+plain English, next to an interactive waterfall you can zoom, filter, and
 click through to verify it.
 
 ```
@@ -27,23 +35,23 @@ The heaviest third-party origin is ads.thirdparty-cdn.test at 14.5% of total pag
 
 Waterfall viewers show you *what happened*. They rarely tell you *what
 mattered*. A page can have 80 requests and only three of them actually gate
-first paint — the rest are async scripts, lazy images, and analytics beacons
+first paint; the rest are async scripts, lazy images, and analytics beacons
 that arrived long before or long after the moment that counted. Re-rendering
 the same 80-row table with prettier colors doesn't fix that. waterfall-lens
 instead:
 
-- **Reconstructs the critical chain**, not just "everything that's slow" —
-  it walks `_initiator` links backward from whichever render-blocking
+- **Reconstructs the critical chain**, not just "everything that's slow".
+  It walks `_initiator` links backward from whichever render-blocking
   response finished last, all the way to the navigation request, so you see
   *why* each step happened, not just *that* it happened.
 - **Classifies render-blocking conservatively and says so.** HAR carries no
   `async`/`defer`/media-query metadata, so a script only counts as
   render-blocking when DevTools recorded it as parser-discovered
-  (`_initiator.type === "parser"`) — scripts injected by other scripts are
+  (`_initiator.type === "parser"`). Scripts injected by other scripts are
   the common shape of async/defer loaders in practice. This is documented as
   a heuristic in the source, not oversold as an exact browser simulation.
 - **Separates "slow" from "queued."** A request with zero DNS/connect/SSL
-  time that still spent 300ms in `blocked` wasn't waiting on the network —
+  time that still spent 300ms in `blocked` wasn't waiting on the network;
   it was waiting for a free connection slot behind five other requests to
   the same host. That's a completely different fix (bundle/preconnect) than
   a genuinely slow response, so it gets its own finding.
@@ -52,6 +60,9 @@ instead:
   of total page weight, sorted so the heaviest offender is first.
 
 ## Quickstart
+
+Requires Node.js 20 or newer. `package.json` declares `>=18`, but CI only
+runs 20 and 22, and the test runner (vitest 4) needs 20+.
 
 ```bash
 git clone https://github.com/hellpuffyt/waterfall-lens.git
@@ -80,24 +91,38 @@ the demo works immediately:
 | Fixture | Scenario |
 |---|---|
 | `news-article-heavy.har` | Article page with render-blocking CSS/JS, a connection-queued image gallery, and an ad/analytics third-party tail |
-| `fast-marketing-page.har` | Lean, fast-loading page — near-instant first paint, no third parties |
-| `minimal-single-request.har` | A single bare document response — the edge case with nothing to attribute |
+| `fast-marketing-page.har` | Lean, fast-loading page: first paint at 110ms, no third parties |
+| `minimal-single-request.har` | A single bare document response, the edge case with nothing to attribute |
 
 Or point it at any real capture: open DevTools → Network → right-click →
-**Save all as HAR with content**.
+**Save all as HAR with content**. Such a capture can contain cookies and
+tokens; see [SECURITY.md](SECURITY.md) before sharing a HAR or a report.
+
+## CLI
+
+```
+waterfall-lens analyze <file.har> [--json]
+waterfall-lens report <file.har> [--out <path.html>]
+waterfall-lens --help
+```
+
+`analyze` prints the explanation and a summary, or the full
+`WaterfallReport` as JSON with `--json`. `report` writes the HTML file;
+without `--out` it goes next to the input as `capture.har.report.html`. Both exit
+1 with a one-line error on a malformed HAR.
 
 ## The interactive report
 
-`waterfall-lens report` writes one self-contained `.html` file — no server,
+`waterfall-lens report` writes one self-contained `.html` file: no server,
 no build step, no external requests, works from `file://`.
 
-![Waterfall report — light theme, full page](docs/waterfall-light.png)
+![Waterfall report, light theme, full page](docs/waterfall-light.png)
 
-Click any request to highlight its full initiator chain — everything that
-caused it, and everything it in turn caused — dimming the rest of the
+Click any request to highlight its full initiator chain (everything that
+caused it, and everything it in turn caused), dimming the rest of the
 waterfall so the causal thread is unambiguous:
 
-![Waterfall report — dark theme, chain highlighted on click](docs/waterfall-dark-chain.png)
+![Waterfall report, dark theme (follows the OS colour scheme), chain highlighted on click](docs/waterfall-dark-chain.png)
 
 - **Zoom** the horizontal time axis from an overview down to millisecond
   detail; the time ruler scrolls in sync with the rows.
@@ -124,41 +149,30 @@ content" of large media) need correspondingly more RAM.
 ## Architecture
 
 ```
-   HAR file (JSON)
-        │
-        ▼
- ┌─────────────┐   structural validation, clear errors
- │  parser.ts  │   on truncated/non-HAR JSON
- └──────┬──────┘
-        ▼
- ┌─────────────────────────────────────────────┐
- │  analyze.ts                                  │
- │  1. normalizeEntries — classify resource type,│
- │     compute timings relative to nav start,    │
- │     flag third-party, flag render-blocking    │
- │  2. attributeThirdPartyWeight — group by host  │
- │  3. findQueuedRequests — pure connection-queue │
- │     time vs. genuine network time              │
- │  4. buildCriticalChain — walk _initiator links │
- │     back from the latest-finishing blocker      │
- │  5. buildExplanation — render the above as       │
- │     plain English                                │
- └──────────────────┬────────────────────────────┘
-                     ▼
-        ┌────────────┴────────────┐
-        ▼                         ▼
- ┌─────────────┐           ┌─────────────┐
- │   cli.ts    │           │   html.ts   │
- │ stdout /    │           │ self-       │
- │ JSON report │           │ contained   │
- └─────────────┘           │ interactive │
-                           │ viewer      │
-                           └─────────────┘
+HAR file (JSON)
+      |
+      v
+parser.ts     structural validation; clear errors on truncated or non-HAR JSON
+      |
+      v
+analyze.ts    analyzeHar(har, label) -> WaterfallReport
+              1. normalizeEntries           resource type, timings relative to
+                                            navigation start, third-party and
+                                            render-blocking flags
+              2. attributeThirdPartyWeight  bytes grouped by host
+              3. findQueuedRequests         connection-queue time vs network time
+              4. buildCriticalChain         walk _initiator links back from the
+                                            latest-finishing blocker
+              5. buildExplanation           the above as plain English
+      |
+      +--------------------------+
+      v                          v
+cli.ts                       html.ts
+stdout text or JSON          self-contained interactive viewer
 ```
 
 The engine (`analyze.ts`) is a pure function of `Har → WaterfallReport` with
-no I/O, so it's exhaustively unit-testable against hand-built HAR shapes —
-that's where most of the 118 tests live. `html.ts` then serializes the
+no I/O, so it is unit-tested against hand-built HAR shapes; that's where most of the 118 tests live. `html.ts` then serializes the
 report as embedded JSON and renders it with a small vanilla-JS layer (no
 framework, no bundler, no CDN dependency at view time).
 
@@ -175,8 +189,8 @@ const html = renderHtmlReport(report);
 ```
 
 `WaterfallReport` (see `src/analyze.ts`) exposes the full structured
-analysis — entries, critical chain, third-party attribution, queued
-requests — for anything you want to build on top (CI budget checks, a
+analysis (entries, critical chain, third-party attribution, queued
+requests) for anything you want to build on top (CI budget checks, a
 custom dashboard, etc.), not just the two built-in output formats.
 
 ## Development
@@ -189,10 +203,25 @@ npm run coverage    # v8 coverage, thresholds enforced
 npm run build       # emit dist/
 ```
 
-CI (`.github/workflows/ci.yml`) runs all of the above across Node 20/22 on
-Ubuntu, Windows, and macOS, plus a CLI smoke test against the built `dist/`
-output.
+CI (`.github/workflows/ci.yml`) runs typecheck, lint, build and coverage
+(which includes the tests) on Node 20 and 22 on Ubuntu, Windows and macOS,
+plus a CLI smoke test that runs `analyze` and `report` against the built
+`dist/` output. See [CONTRIBUTING.md](CONTRIBUTING.md) before opening a PR.
+
+## Limitations
+
+- Render-blocking is a heuristic, because HAR has no `async`/`defer`/media
+  data: the document and every stylesheet block, and a script blocks only
+  when `_initiator.type` is `parser`. In a capture without the DevTools
+  `_initiator` field, no script counts as blocking.
+- First paint is an estimate from the chain, not a measured paint timing.
+- The whole HAR is read into memory.
+
+## Security
+
+HAR files are treated as untrusted input; reports copy full request URLs,
+including query strings. See [SECURITY.md](SECURITY.md).
 
 ## License
 
-MIT © 2026 Prabesh Sharma — see [LICENSE](LICENSE).
+MIT © 2026 Prabesh Sharma. See [LICENSE](LICENSE).
